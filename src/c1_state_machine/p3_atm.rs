@@ -13,6 +13,17 @@ pub enum Key {
     Four,
     Enter,
 }
+impl Key {
+    pub fn to_u64(&self) -> u64 {
+        match self {
+            Key::One => 1,
+            Key::Two => 2,
+            Key::Three => 3,
+            Key::Four => 4,
+            _ => 0,
+        }
+    }
+}
 
 /// Something you can do to the ATM
 pub enum Action {
@@ -58,7 +69,94 @@ impl StateMachine for Atm {
     type Transition = Action;
 
     fn next_state(starting_state: &Self::State, t: &Self::Transition) -> Self::State {
-        todo!("Exercise 4")
+        if starting_state.cash_inside == 0 {
+            return starting_state.clone();
+        }
+        match starting_state.expected_pin_hash {
+            Auth::Waiting => match t {
+                Action::SwipeCard(pin_hash) => {
+                    return Atm {
+                        expected_pin_hash: Auth::Authenticating(*pin_hash),
+                        ..starting_state.clone()
+                    };
+                }
+                _ => {
+                    return starting_state.clone();
+                }
+            },
+            Auth::Authenticating(pin_hash) => {
+                match t {
+                    Action::PressKey(Key::Enter) => {
+                        // validate the pin
+                        let hash_of_entired_pin = crate::hash(&starting_state.keystroke_register);
+                        if hash_of_entired_pin == pin_hash {
+                            return Atm {
+                                expected_pin_hash: Auth::Authenticated,
+                                keystroke_register: Vec::new(),
+                                ..starting_state.clone()
+                            };
+                        } else {
+                            return Atm {
+                                keystroke_register: Vec::new(),
+                                expected_pin_hash: Auth::Waiting,
+                                ..starting_state.clone()
+                            };
+                        }
+                    }
+                    Action::PressKey(key) => {
+                        let mut keystroke_register = starting_state.keystroke_register.clone();
+                        keystroke_register.push(key.clone());
+                        return Atm {
+                            keystroke_register,
+                            ..starting_state.clone()
+                        };
+                    }
+                    _ => {
+                        return starting_state.clone();
+                    }
+                }
+            }
+            Auth::Authenticated => {
+                match t {
+                    Action::PressKey(Key::Enter) => {
+                        // validate the amount and subtract from cash
+                        let amount_user_want = starting_state
+                            .keystroke_register
+                            .iter()
+                            .map(|key| format!("{}", key.to_u64()))
+                            .collect::<Vec<String>>()
+                            .concat()
+                            .parse::<u64>()
+                            .unwrap_or_default();
+
+                        if starting_state.cash_inside < amount_user_want {
+                            return Atm {
+                                expected_pin_hash: Auth::Waiting,
+                                keystroke_register: Vec::new(),
+                                ..starting_state.clone()
+                            };
+                        } else {
+                            return Atm {
+                                cash_inside: starting_state.cash_inside - amount_user_want,
+                                expected_pin_hash: Auth::Waiting,
+                                keystroke_register: Vec::new(),
+                            };
+                        }
+                    }
+                    Action::PressKey(key) => {
+                        let mut keystroke_register = starting_state.keystroke_register.clone();
+                        keystroke_register.push(key.clone());
+                        return Atm {
+                            keystroke_register,
+                            ..starting_state.clone()
+                        };
+                    }
+                    _ => {
+                        return starting_state.clone();
+                    }
+                }
+            }
+        }
     }
 }
 
