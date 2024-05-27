@@ -9,7 +9,7 @@ use super::StateMachine;
 pub struct ClothesMachine;
 
 /// Models a piece of clothing throughout its lifecycle.
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum ClothesState {
     /// Clean clothes ready to be worn. With some given life left.
     Clean(u64),
@@ -24,6 +24,7 @@ pub enum ClothesState {
 }
 
 /// Something you can do with clothes
+#[derive(Clone, Copy)]
 pub enum ClothesAction {
     /// Wearing clothes decreases their life by 1 and makes them dirty.
     Wear,
@@ -40,7 +41,93 @@ impl StateMachine for ClothesMachine {
     type Transition = ClothesAction;
 
     fn next_state(starting_state: &ClothesState, t: &ClothesAction) -> ClothesState {
-        todo!("Exercise 3")
+        match (*t, *starting_state) {
+            // Wear
+            (ClothesAction::Wear, ClothesState::Clean(life)) => {
+                let new_life = life - 1;
+                if new_life > 0 {
+                    return ClothesState::Dirty(new_life);
+                } else {
+                    return ClothesState::Tattered;
+                }
+            }
+            (ClothesAction::Wear, ClothesState::Dirty(life)) => {
+                let new_life = life - 1;
+                if new_life > 0 {
+                    return ClothesState::Dirty(new_life);
+                } else {
+                    return ClothesState::Tattered;
+                }
+            }
+
+            (ClothesAction::Wear, ClothesState::Wet(life)) => {
+                let new_life = life - 1;
+                if new_life > 0 {
+                    return ClothesState::Dirty(new_life);
+                } else {
+                    return ClothesState::Tattered;
+                }
+            }
+            (ClothesAction::Wear, ClothesState::Tattered) => {
+                return ClothesState::Tattered;
+            }
+
+            // Wash
+            (ClothesAction::Wash, ClothesState::Clean(life)) => {
+                let new_life = life - 1;
+                if new_life > 0 {
+                    return ClothesState::Wet(new_life);
+                } else {
+                    return ClothesState::Tattered;
+                }
+            }
+            (ClothesAction::Wash, ClothesState::Dirty(life)) => {
+                let new_life = life - 1;
+                if new_life > 0 {
+                    return ClothesState::Wet(new_life);
+                } else {
+                    return ClothesState::Tattered;
+                }
+            }
+            (ClothesAction::Wash, ClothesState::Wet(life)) => {
+                let new_life = life - 1;
+                if new_life > 0 {
+                    return ClothesState::Wet(new_life);
+                } else {
+                    return ClothesState::Tattered;
+                }
+            }
+            (ClothesAction::Wash, ClothesState::Tattered) => {
+                return ClothesState::Tattered;
+            }
+            (ClothesAction::Dry, ClothesState::Clean(life)) => {
+                let new_life = life - 1;
+                if new_life > 0 {
+                    return ClothesState::Clean(new_life);
+                } else {
+                    return ClothesState::Tattered;
+                }
+            }
+            (ClothesAction::Dry, ClothesState::Dirty(life)) => {
+                let new_life = life - 1;
+                if new_life > 0 {
+                    return ClothesState::Dirty(new_life);
+                } else {
+                    return ClothesState::Tattered;
+                }
+            }
+            (ClothesAction::Dry, ClothesState::Wet(life)) => {
+                let new_life = life - 1;
+                if new_life > 0 {
+                    return ClothesState::Clean(new_life);
+                } else {
+                    return ClothesState::Tattered;
+                }
+            }
+            (ClothesAction::Dry, ClothesState::Tattered) => {
+                return ClothesState::Tattered;
+            }
+        }
     }
 }
 
